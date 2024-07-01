@@ -7,9 +7,9 @@ pub enum DealerOnSoft17 {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
-pub enum SurrenderKind {
-    Early, // before dealer checks for blackjack
-    Late, // after dealer checks for blackjack
+pub enum ShuffleKind {
+    Continuous,
+    Threshold(u64),
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
@@ -19,6 +19,7 @@ pub struct RuleSet {
     players: usize,
     min_bet: f64,
     max_bet: f64,
+    shuffle_kind: ShuffleKind,
 
     // dealer rules
     dealer_on_soft_17: DealerOnSoft17,
@@ -34,8 +35,8 @@ pub struct RuleSet {
     can_play_slit_aces: bool,
     das: bool, // can DD after splitting
 
-    // surrendering
-    surrender: Option<SurrenderKind>
+    // surrendering (always late (after dealer checks for bj))
+    can_surrender: bool,
 }
 
 impl RuleSet {
@@ -44,13 +45,14 @@ impl RuleSet {
         players: usize,
         min_bet: f64,
         max_bet: f64,
+        shuffle_kind: ShuffleKind,
         dealer_on_soft_17: DealerOnSoft17,
         blackjack_payout: f64,
         double_down_whitelist: Option<Vec<u64>>,
         max_hands: u64,
         can_play_slit_aces: bool,
         das: bool,
-        surrender: Option<SurrenderKind>,
+        can_surrender: bool,
     ) -> Result<Self, RuleSetError> {
         if decks == 0 {
             return Err(RuleSetError::InvalidDeckNumer);
@@ -85,13 +87,14 @@ impl RuleSet {
             players,
             min_bet,
             max_bet,
+            shuffle_kind,
             dealer_on_soft_17,
             blackjack_payout,
             double_down_whitelist,
             max_hands,
             can_play_slit_aces,
             das,
-            surrender,
+            can_surrender,
         })
     }
 
@@ -109,6 +112,10 @@ impl RuleSet {
 
     pub fn max_bet(&self) -> f64 {
         self.max_bet
+    }
+
+    pub fn shuffle_kind(&self) -> ShuffleKind {
+        self.shuffle_kind
     }
 
     pub fn dealer_on_soft_17(&self) -> DealerOnSoft17 {
@@ -135,8 +142,8 @@ impl RuleSet {
         self.das
     }
 
-    pub fn surrender(&self) -> Option<SurrenderKind> {
-        self.surrender
+    pub fn can_surrender(&self) -> bool {
+        self.can_surrender
     }
 }
 
@@ -165,7 +172,7 @@ impl Error for RuleSetError {}
 
 #[cfg(test)]
 mod tests {
-    use crate::rule::{DealerOnSoft17, RuleSet, RuleSetError};
+    use crate::rule::{DealerOnSoft17, RuleSet, RuleSetError, ShuffleKind};
 
     #[test]
     fn create_rulesets() {
@@ -174,13 +181,14 @@ mod tests {
             4,
             1.0,
             1.0,
+            ShuffleKind::Continuous,
             DealerOnSoft17::H17,
             1.5,
             None,
             3,
             false,
             false,
-            None,
+            false,
         ).is_ok() );
 
         let invalid_deck_number = RuleSet::new(
@@ -188,13 +196,14 @@ mod tests {
             4,
             1.0,
             1.0,
+            ShuffleKind::Continuous,
             DealerOnSoft17::H17,
             1.5,
             None,
             3,
             false,
             false,
-            None,
+            false,
         );
         assert_eq!(Err(RuleSetError::InvalidDeckNumer), invalid_deck_number);
 
@@ -203,13 +212,14 @@ mod tests {
             0,
             1.0,
             1.0,
+            ShuffleKind::Continuous,
             DealerOnSoft17::H17,
             1.5,
             None,
             3,
             false,
             false,
-            None,
+            false,
         );
         assert_eq!(Err(RuleSetError::InvalidPlayerNumber), invalid_player_number);
 
@@ -218,13 +228,14 @@ mod tests {
             4,
             2.0,
             1.0,
+            ShuffleKind::Continuous,
             DealerOnSoft17::H17,
             1.5,
             None,
             3,
             false,
             false,
-            None,
+            false,
         );
         assert_eq!(Err(RuleSetError::InvalidBetRange), invalid_bet_range);
 
@@ -233,13 +244,14 @@ mod tests {
             4,
             1.0,
             1.0,
+            ShuffleKind::Continuous,
             DealerOnSoft17::H17,
             1.5,
             None,
             1,
             false,
             false,
-            None,
+            false,
         );
         assert_eq!(Err(RuleSetError::InvalidMaxHands), invalid_max_hands);
 
@@ -248,13 +260,14 @@ mod tests {
             4,
             1.0,
             1.0,
+            ShuffleKind::Continuous,
             DealerOnSoft17::H17,
             1.5,
             Some(vec![9, 10, 11, 21]),
             3,
             false,
             false,
-            None,
+            false,
         );
         assert_eq!(Err(RuleSetError::InvalidDoubleDownWhitelist), invalid_double_down_whitelist);
     }
