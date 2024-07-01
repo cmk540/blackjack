@@ -94,6 +94,50 @@ impl RuleSet {
             surrender,
         })
     }
+
+    pub fn decks(&self) -> usize {
+        self.decks
+    }
+
+    pub fn players(&self) -> usize {
+        self.players
+    }
+
+    pub fn min_bet(&self) -> f64 {
+        self.min_bet
+    }
+
+    pub fn max_bet(&self) -> f64 {
+        self.max_bet
+    }
+
+    pub fn dealer_on_soft_17(&self) -> DealerOnSoft17 {
+        self.dealer_on_soft_17
+    }
+
+    pub fn blackjack_payout(&self) -> f64 {
+        self.blackjack_payout
+    }
+
+    pub fn double_down_whitelist(&self) -> Option<Vec<u64>> {
+        self.double_down_whitelist.clone()
+    }
+
+    pub fn max_hands(&self) -> u64 {
+        self.max_hands
+    }
+
+    pub fn can_play_slit_aces(&self) -> bool {
+        self.can_play_slit_aces
+    }
+
+    pub fn das(&self) -> bool {
+        self.das
+    }
+
+    pub fn surrender(&self) -> Option<SurrenderKind> {
+        self.surrender
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
