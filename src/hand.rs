@@ -1,4 +1,4 @@
-use crate::{card::{Card, Rank}, rule::RuleSet};
+use crate::card::{Card, Rank};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum HandState {
