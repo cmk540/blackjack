@@ -67,71 +67,71 @@ impl IsTerminal for Hand<Fresh> {
     }
 }
 
-impl HandInfo for Hand<Fresh> {
-    fn is_21(&self) -> bool {
-        match self.value() {
-            HandValue::Hard(v) => {
-                if v == 21 {
-                    return true;
-                }
+// impl HandInfo for Hand<Fresh> {
+//     fn is_21(&self) -> bool {
+//         match self.value() {
+//             HandValue::Hard(v) => {
+//                 if v == 21 {
+//                     return true;
+//                 }
 
-                false
-            },
-            HandValue::Soft { lower, upper } => {
-                if lower == 21 || upper == 21 {
-                    return true;
-                }
+//                 false
+//             },
+//             HandValue::Soft { lower, upper } => {
+//                 if lower == 21 || upper == 21 {
+//                     return true;
+//                 }
 
-                false
-            },
-        }
-    }
+//                 false
+//             },
+//         }
+//     }
 
-    fn is_natural(&self) -> bool {
-        if self.is_21() {
-            return true;
-        }
+//     fn is_natural(&self) -> bool {
+//         if self.is_21() {
+//             return true;
+//         }
 
-        false
-    }
+//         false
+//     }
 
-    fn is_bust(&self) -> bool {
-        match self.value() {
-            HandValue::Hard(v) => {
-                if v > 21 {
-                    return true;
-                }
+//     fn is_bust(&self) -> bool {
+//         match self.value() {
+//             HandValue::Hard(v) => {
+//                 if v > 21 {
+//                     return true;
+//                 }
 
-                false
-            },
-            HandValue::Soft { lower, upper } => {
-                if lower > 21 {
-                    return true;
-                }
+//                 false
+//             },
+//             HandValue::Soft { lower, upper } => {
+//                 if lower > 21 {
+//                     return true;
+//                 }
 
-                false
-            },
-        }
-    }
+//                 false
+//             },
+//         }
+//     }
 
-    fn is_pair(&self) -> bool {
-        if self.stack.len() == 2 {
-            if self.stack[0].rank() == self.stack[0].rank() {
-                return true;
-            }
-        }
+//     fn is_pair(&self) -> bool {
+//         if self.stack.len() == 2 {
+//             if self.stack[0].rank() == self.stack[0].rank() {
+//                 return true;
+//             }
+//         }
 
-        false
-    }
+//         false
+//     }
 
-    fn can_hit(&self, rules: RuleSet) -> bool {
-        if !self.is_bust() {
-            return true;
-        }
+//     fn can_hit(&self, rules: RuleSet) -> bool {
+//         if !self.is_bust() {
+//             return true;
+//         }
 
-        false
-    }
-}
+//         false
+//     }
+// }
 
 impl Hand<Fresh> {
     pub fn new(stack: Vec<Card>) -> Self {

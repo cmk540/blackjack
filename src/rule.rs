@@ -28,7 +28,7 @@ pub struct RuleSet {
     blackjack_payout: f64,
 
     // doubling down
-    double_down_whitelist: Option<Vec<u64>>, // can DD on listed values, else always
+    double_down_whitelist: Vec<u64>,
 
     // splitting
     max_hands: u64,
@@ -48,7 +48,7 @@ impl RuleSet {
         shuffle_kind: ShuffleKind,
         dealer_on_soft_17: DealerOnSoft17,
         blackjack_payout: f64,
-        double_down_whitelist: Option<Vec<u64>>,
+        double_down_whitelist: Vec<u64>,
         max_hands: u64,
         can_play_slit_aces: bool,
         das: bool,
@@ -74,11 +74,9 @@ impl RuleSet {
             return Err(RuleSetError::InvalidMaxHands);
         }
 
-        if let Some(values) = double_down_whitelist.clone() {
-            for val in values {
-                if val < 3 || val > 20 {
-                    return Err(RuleSetError::InvalidDoubleDownWhitelist);
-                }
+        for val in double_down_whitelist.clone() {
+            if val < 3 || val > 20 {
+                return Err(RuleSetError::InvalidDoubleDownWhitelist);
             }
         }
 
@@ -126,7 +124,7 @@ impl RuleSet {
         self.blackjack_payout
     }
 
-    pub fn double_down_whitelist(&self) -> Option<Vec<u64>> {
+    pub fn double_down_whitelist(&self) -> Vec<u64> {
         self.double_down_whitelist.clone()
     }
 
@@ -163,7 +161,7 @@ impl fmt::Display for RuleSetError {
             Self::InvalidPlayerNumber => write!(f, "must have at least 1 player"),
             Self::InvalidBetRange => write!(f, "min bet must be at least 1 and not exceed max bet"),
             Self::InvalidMaxHands => write!(f, "must have at least 2 max hands"),
-            Self::InvalidDoubleDownWhitelist => write!(f, "double down whitelist must contain some values from 3 to 20 or be `None`"),
+            Self::InvalidDoubleDownWhitelist => write!(f, "double down whitelist must contain some values from 3 to 20"),
         }
     }
 }
@@ -184,7 +182,7 @@ mod tests {
             ShuffleKind::Continuous,
             DealerOnSoft17::H17,
             1.5,
-            None,
+            vec![9, 10, 11],
             3,
             false,
             false,
@@ -199,7 +197,7 @@ mod tests {
             ShuffleKind::Continuous,
             DealerOnSoft17::H17,
             1.5,
-            None,
+            vec![9, 10, 11],
             3,
             false,
             false,
@@ -215,7 +213,7 @@ mod tests {
             ShuffleKind::Continuous,
             DealerOnSoft17::H17,
             1.5,
-            None,
+            vec![9, 10, 11],
             3,
             false,
             false,
@@ -231,7 +229,7 @@ mod tests {
             ShuffleKind::Continuous,
             DealerOnSoft17::H17,
             1.5,
-            None,
+            vec![9, 10, 11],
             3,
             false,
             false,
@@ -247,7 +245,7 @@ mod tests {
             ShuffleKind::Continuous,
             DealerOnSoft17::H17,
             1.5,
-            None,
+            vec![9, 10, 11],
             1,
             false,
             false,
@@ -263,7 +261,7 @@ mod tests {
             ShuffleKind::Continuous,
             DealerOnSoft17::H17,
             1.5,
-            Some(vec![9, 10, 11, 21]),
+            vec![9, 10, 11, 21],
             3,
             false,
             false,
