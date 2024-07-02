@@ -67,6 +67,72 @@ impl IsTerminal for Hand<Fresh> {
     }
 }
 
+impl HandInfo for Hand<Fresh> {
+    fn is_21(&self) -> bool {
+        match self.value() {
+            HandValue::Hard(v) => {
+                if v == 21 {
+                    return true;
+                }
+
+                false
+            },
+            HandValue::Soft { lower, upper } => {
+                if lower == 21 || upper == 21 {
+                    return true;
+                }
+
+                false
+            },
+        }
+    }
+
+    fn is_natural(&self) -> bool {
+        if self.is_21() {
+            return true;
+        }
+
+        false
+    }
+
+    fn is_bust(&self) -> bool {
+        match self.value() {
+            HandValue::Hard(v) => {
+                if v > 21 {
+                    return true;
+                }
+
+                false
+            },
+            HandValue::Soft { lower, upper } => {
+                if lower > 21 {
+                    return true;
+                }
+
+                false
+            },
+        }
+    }
+
+    fn is_pair(&self) -> bool {
+        if self.stack.len() == 2 {
+            if self.stack[0].rank() == self.stack[0].rank() {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn can_hit(&self, rules: RuleSet) -> bool {
+        if !self.is_bust() {
+            return true;
+        }
+
+        false
+    }
+}
+
 impl Hand<Fresh> {
     pub fn new(stack: Vec<Card>) -> Self {
         Self {
@@ -137,6 +203,10 @@ pub trait HandInfo {
     fn is_21(&self) -> bool;
 
     fn is_natural(&self) -> bool;
+
+    fn is_bust(&self) -> bool;
+
+    fn is_pair(&self) -> bool;
 
     fn can_hit(&self, rules: RuleSet) -> bool;
 
