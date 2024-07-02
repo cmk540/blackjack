@@ -1,30 +1,80 @@
 use crate::{card::{Card, Rank}, rule::RuleSet};
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct Hand<S: HandState> {
-    stack: Vec<Card>,
-    marker: std::marker::PhantomData<S>,
-}
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum HandValue {
     Hard(u64),
     Soft {
         lower: u64,
         upper: u64,
-    }
+    },
 }
 
-impl<S> Hand<S>
-    where S: HandState
-{
-    pub fn value(&self) -> HandValue {
-        let aces = self.stack.iter().filter(|&c| c.rank() == Rank::Ace).count();
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
+pub enum HandState {
+    Fresh,
+    Split,
+    SpltA,
+    Stand,
+    Busts,
+    DDown,
+    Srndr,
+}
 
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct Hand {
+    cards: Vec<Card>,
+    bet: f64,
+    state: HandState,
+}
+
+impl Hand {
+    pub fn new(cards: [Card; 2], bet: f64) -> Self {
+        Self {
+            cards: cards.to_vec(),
+            bet,
+            state: HandState::Fresh,
+        }
+    }
+
+    pub fn cards(&self) -> Vec<Card> {
+        self.cards.clone()
+    }
+
+    pub fn bet(&self) -> f64 {
+        self.bet
+    }
+
+    pub fn state(&self) -> HandState {
+        self.state
+    }
+
+    pub fn is_terminal(&self) -> bool {
+        match self.state {
+            HandState::Fresh => false,
+            HandState::Split => false,
+            HandState::SpltA => true,
+            HandState::Stand => true,
+            HandState::Busts => true,
+            HandState::DDown => true,
+            HandState::Srndr => true,
+        }
+    }
+
+    pub fn is_hard(&self) -> bool {
+        for c in &self.cards {
+            if c.rank() == Rank::Ace {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    pub fn value(&self) -> HandValue {
         let mut value: u64 = 0;
 
-        if aces == 0 {
-            for c in &self.stack {
+        if self.is_hard() {
+            for c in &self.cards {
                 match c.rank() {
                     Rank::Ace => panic!("ace found in hard hand"),
                     Rank::Two => value += 2,
@@ -41,7 +91,7 @@ impl<S> Hand<S>
 
             return HandValue::Hard(value);
         } else {
-            for c in &self.stack {
+            for c in &self.cards {
                 match c.rank() {
                     Rank::Ace => value += 1,
                     Rank::Two => value += 2,
@@ -56,198 +106,192 @@ impl<S> Hand<S>
                 }
             }
 
-        return HandValue::Soft { lower: value, upper: value + 10 };
+            return HandValue::Soft { lower: value, upper: value + 10 };
         }
     }
-}
 
-impl IsTerminal for Hand<Fresh> {
-    fn is_terminal() -> bool {
-        false
-    }
-}
+    pub fn is_bust(&self) -> bool {
+        match self.value() {
+            HandValue::Hard(v) => {
+                if v > 21 {
+                    return true;
+                }
 
-// impl HandInfo for Hand<Fresh> {
-//     fn is_21(&self) -> bool {
-//         match self.value() {
-//             HandValue::Hard(v) => {
-//                 if v == 21 {
-//                     return true;
-//                 }
+                false
+            },
+            HandValue::Soft { lower, .. } => {
+                if lower > 21 {
+                    return true;
+                }
 
-//                 false
-//             },
-//             HandValue::Soft { lower, upper } => {
-//                 if lower == 21 || upper == 21 {
-//                     return true;
-//                 }
-
-//                 false
-//             },
-//         }
-//     }
-
-//     fn is_natural(&self) -> bool {
-//         if self.is_21() {
-//             return true;
-//         }
-
-//         false
-//     }
-
-//     fn is_bust(&self) -> bool {
-//         match self.value() {
-//             HandValue::Hard(v) => {
-//                 if v > 21 {
-//                     return true;
-//                 }
-
-//                 false
-//             },
-//             HandValue::Soft { lower, upper } => {
-//                 if lower > 21 {
-//                     return true;
-//                 }
-
-//                 false
-//             },
-//         }
-//     }
-
-//     fn is_pair(&self) -> bool {
-//         if self.stack.len() == 2 {
-//             if self.stack[0].rank() == self.stack[0].rank() {
-//                 return true;
-//             }
-//         }
-
-//         false
-//     }
-
-//     fn can_hit(&self, rules: RuleSet) -> bool {
-//         if !self.is_bust() {
-//             return true;
-//         }
-
-//         false
-//     }
-// }
-
-impl Hand<Fresh> {
-    pub fn new(stack: Vec<Card>) -> Self {
-        Self {
-            stack,
-            marker: std::marker::PhantomData::<Fresh>,
+                false
+            },
         }
     }
-}
 
-impl IsTerminal for Hand<Bust> {
-    fn is_terminal() -> bool {
+    pub fn can_hit(&self) -> bool {
+        if self.is_terminal() {
+            return false;
+        }
+
         true
     }
-}
 
-impl IsTerminal for Hand<DoubleDown> {
-    fn is_terminal() -> bool {
+    pub fn hit(&mut self, added_card: Card) {
+        assert!(self.can_hit(), "tried to hit when not allowed");
+
+        self.cards.push(added_card);
+
+        if self.is_bust() {
+            self.state = HandState::Busts;
+        }
+    }
+
+    pub fn can_stand(&self) -> bool {
+        if self.is_terminal() {
+            return false;
+        }
+
         true
     }
-}
 
-impl IsTerminal for Hand<Split> {
-    fn is_terminal() -> bool {
+    pub fn stand(&mut self) {
+        assert!(self.can_hit(), "tried to stand when not allowed");
+
+        self.state = HandState::Stand;
+    }
+
+    pub fn can_double_down(&self, rules: RuleSet) -> bool {
+        if self.is_terminal() {
+            return false;
+        }
+
+        if !rules.das() && self.state() == HandState::Split {
+            return false;
+        }
+
+        let hand_values: Vec<u64> = {
+            match self.value() {
+                HandValue::Hard(n) => vec![n],
+                HandValue::Soft { lower, upper } => vec![lower, upper],
+            }
+        };
+
+        for hand_value in hand_values {
+            if rules.double_down_whitelist().contains(&hand_value) {
+                return true;
+            }
+        }
+
         false
     }
-}
 
-impl IsTerminal for Hand<SplitAcesLocked> {
-    fn is_terminal() -> bool {
-        true
+    pub fn double_down(&mut self) {
+        self.bet = self.bet() * 2.0;
+        self.state = HandState::DDown;
     }
-}
-
-impl IsTerminal for Hand<Stand> {
-    fn is_terminal() -> bool {
-        true
-    }
-}
-
-impl IsTerminal for Hand<Surrender> {
-    fn is_terminal() -> bool {
-        true
-    }
-}
-
-pub struct Fresh;
-pub struct Bust;
-pub struct DoubleDown;
-pub struct Split;
-pub struct SplitAcesLocked;
-pub struct Stand;
-pub struct Surrender;
-
-pub trait HandState {}
-impl HandState for Fresh {}
-impl HandState for Bust {}
-impl HandState for DoubleDown {}
-impl HandState for Split {}
-impl HandState for SplitAcesLocked {}
-impl HandState for Stand {}
-impl HandState for Surrender {}
-
-pub trait IsTerminal {
-    fn is_terminal() -> bool;
-}
-
-pub trait HandInfo {
-    fn is_21(&self) -> bool;
-
-    fn is_natural(&self) -> bool;
-
-    fn is_bust(&self) -> bool;
-
-    fn is_pair(&self) -> bool;
-
-    fn can_hit(&self, rules: RuleSet) -> bool;
-
-    fn can_split(&self, rules: RuleSet) -> bool;
-    
-    fn can_surrender(&self, rules: RuleSet) -> bool;
-
-    fn can_double_down(&self, rules: RuleSet) -> bool;
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{card::{Card, Rank, Suit}, hand::{Hand, HandValue}};
+    use crate::{card::{Card, Rank, Suit}, hand::{Hand, HandState, HandValue}, rule::{DealerOnSoft17, RuleSet, ShuffleKind}};
+    
+    #[test]
+    fn hitting() {
+        // hard hand
+        let mut hand = Hand::new(
+            [
+                Card::new(Suit::Clubs, Rank::Ten),
+                Card::new(Suit::Clubs, Rank::Two),
+            ],
+            1.0,
+        );
+
+        assert_eq!(HandValue::Hard(12), hand.value());
+        assert!(hand.can_hit());
+
+        hand.hit(Card::new(Suit::Hearts, Rank::Ten));
+
+        assert_eq!(HandState::Busts, hand.state());
+        assert!(hand.is_terminal());
+        assert!(!hand.can_hit());
+
+        assert_eq!(HandValue::Hard(22), hand.value());
+
+        // soft hand
+        let mut hand_s = Hand::new(
+            [
+                Card::new(Suit::Clubs, Rank::Two),
+                Card::new(Suit::Clubs, Rank::Ace),
+            ],
+            1.0,
+        );
+
+        assert_eq!(HandValue::Soft { lower: 3, upper: 13 }, hand_s.value());
+        assert!(hand_s.can_hit());
+
+        hand_s.hit(Card::new(Suit::Clubs, Rank::Ten));
+
+        assert_eq!(HandValue::Soft { lower: 13, upper: 23 }, hand_s.value());
+        assert!(hand_s.can_hit());
+
+        hand_s.hit(Card::new(Suit::Clubs, Rank::Ten));
+
+        assert_eq!(HandState::Busts, hand.state());
+        assert!(hand_s.is_terminal());
+        assert!(!hand_s.can_hit());
+
+        assert_eq!(HandValue::Soft { lower: 23, upper: 33 }, hand_s.value());
+    }
 
     #[test]
-    fn value_of_hands() {
-        let hard_hand = Hand::new(
-            vec![
+    fn standing() {
+        let mut hand = Hand::new(
+            [
+                Card::new(Suit::Clubs, Rank::Ten),
                 Card::new(Suit::Clubs, Rank::Two),
-                Card::new(Suit::Clubs, Rank::Queen),
-            ]
+            ],
+            1.0,
         );
 
-        assert_eq!(HandValue::Hard(12), hard_hand.value());
+        hand.hit(Card::new(Suit::Hearts, Rank::Six));
+        assert_eq!(HandValue::Hard(18), hand.value());
 
-        let soft_hand = Hand::new(
-            vec![
-                Card::new(Suit::Clubs, Rank::King),
-                Card::new(Suit::Clubs, Rank::Ace),
-            ]
+        hand.stand();
+
+        assert_eq!(HandState::Stand, hand.state());
+        assert!(hand.is_terminal());
+        assert!(!hand.can_hit());
+        assert!(!hand.can_stand());
+    }
+
+    #[test]
+    fn d_downing() {
+        let rules_no_das: RuleSet = RuleSet::new(
+            4,
+            4,
+            1.0,
+            1.0,
+            ShuffleKind::Continuous,
+            DealerOnSoft17::H17,
+            1.5,
+            vec![9, 10, 11],
+            3,
+            false,
+            false,
+            false,
+        ).unwrap();
+
+        let mut hand = Hand::new(
+            [
+                Card::new(Suit::Clubs, Rank::Five),
+                Card::new(Suit::Clubs, Rank::Six),
+            ],
+            1.0,
         );
 
-        assert_eq!(HandValue::Soft { lower: 11, upper: 21 }, soft_hand.value());
+        assert!(hand.can_double_down(rules_no_das));
 
-        let soft_hand2 = Hand::new(
-            vec![
-                Card::new(Suit::Clubs, Rank::Ace),
-                Card::new(Suit::Hearts, Rank::Ace),
-            ]
-        );
-
-        assert_eq!(HandValue::Soft { lower: 2, upper: 12 }, soft_hand2.value());
+        hand.double_down();
     }
 }

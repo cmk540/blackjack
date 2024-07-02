@@ -1,0 +1,1 @@
+// bot will have to remember to stand on blackjack
