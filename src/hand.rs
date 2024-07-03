@@ -187,8 +187,52 @@ impl Hand {
     }
 
     pub fn double_down(&mut self) {
+        assert!(!self.is_terminal(), "tried to double down on terminal hand");
+        
         self.bet = self.bet() * 2.0;
         self.state = HandState::DDown;
+    }
+
+    pub fn split(&mut self, card1: Card, card2: Card, bet: f64, lock_aces: bool) -> Self {
+        let cards2 = vec![
+            self.cards.pop().unwrap(),
+            card2,
+        ];
+
+        self.cards.push(card1);
+
+        if lock_aces {
+            self.state = HandState::SpltA;
+            return Self {
+                cards: cards2,
+                bet,
+                state: HandState::SpltA,
+            };
+        } else {
+            self.state = HandState::Split;
+            return Self {
+                cards: cards2,
+                bet,
+                state: HandState::Split,
+            };
+        }
+    }
+
+    pub fn can_surrender(&self, rules: RuleSet) -> bool {
+        if self.is_terminal() {
+            return false;
+        }
+
+        if rules.can_surrender() {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    pub fn surrender(&mut self) {
+        self.state = HandState::Srndr;
+        self.bet = self.bet / 2.0;
     }
 }
 
@@ -293,5 +337,47 @@ mod tests {
         assert!(hand.can_double_down(rules_no_das));
 
         hand.double_down();
+
+        assert_eq!(HandState::DDown, hand.state());
+        assert!(hand.is_terminal());
+        assert_eq!(2.0, hand.bet());
     }
+
+    #[test]
+    fn splitting() {
+        let mut hand1 = Hand::new(
+            [
+                Card::new(Suit::Clubs, Rank::Six),
+                Card::new(Suit::Clubs, Rank::Six),
+            ],
+            1.0,
+        );
+
+        let hand2 = hand1.split(
+            Card::new(Suit::Clubs, Rank::Two),
+            Card::new(Suit::Clubs, Rank::Two),
+            1.0,
+            false
+        );
+
+        assert_eq!(hand1, hand2);
+        assert_eq!(HandState::Split, hand1.state());
+    }
+
+    #[test]
+    fn surrendering() {
+        let mut hand = Hand::new(
+            [
+                Card::new(Suit::Clubs, Rank::Six),
+                Card::new(Suit::Clubs, Rank::Six),
+            ],
+            1.0,
+        );
+
+        hand.surrender();
+
+        assert_eq!(HandState::Srndr, hand.state());
+        assert_eq!(0.5, hand.bet());
+    }
+
 }
