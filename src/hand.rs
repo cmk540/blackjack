@@ -28,11 +28,11 @@ pub struct Hand {
 }
 
 impl Hand {
-    pub fn new(cards: [Card; 2], bet: f64) -> Self {
+    pub fn new(cards: Vec<Card>, bet: f64, state: HandState) -> Self {
         Self {
-            cards: cards.to_vec(),
+            cards,
             bet,
-            state: HandState::Fresh,
+            state,
         }
     }
 
@@ -166,7 +166,7 @@ impl Hand {
             return false;
         }
 
-        if !rules.das() && self.state() == HandState::Split {
+        if !rules.can_dd_after_split() && self.state() == HandState::Split {
             return false;
         }
 
@@ -244,11 +244,12 @@ mod tests {
     fn hitting() {
         // hard hand
         let mut hand = Hand::new(
-            [
+            vec![
                 Card::new(Suit::Clubs, Rank::Ten),
                 Card::new(Suit::Clubs, Rank::Two),
             ],
             1.0,
+            HandState::Fresh,
         );
 
         assert_eq!(HandValue::Hard(12), hand.value());
@@ -264,11 +265,12 @@ mod tests {
 
         // soft hand
         let mut hand_s = Hand::new(
-            [
+            vec![
                 Card::new(Suit::Clubs, Rank::Two),
                 Card::new(Suit::Clubs, Rank::Ace),
             ],
             1.0,
+            HandState::Fresh,
         );
 
         assert_eq!(HandValue::Soft { lower: 3, upper: 13 }, hand_s.value());
@@ -291,11 +293,12 @@ mod tests {
     #[test]
     fn standing() {
         let mut hand = Hand::new(
-            [
+            vec![
                 Card::new(Suit::Clubs, Rank::Ten),
                 Card::new(Suit::Clubs, Rank::Two),
             ],
             1.0,
+            HandState::Fresh,
         );
 
         hand.hit(Card::new(Suit::Hearts, Rank::Six));
@@ -311,7 +314,7 @@ mod tests {
 
     #[test]
     fn d_downing() {
-        let rules_no_das: RuleSet = RuleSet::new(
+        let rules_no_can_dd_after_split: RuleSet = RuleSet::new(
             4,
             4,
             1.0,
@@ -327,14 +330,15 @@ mod tests {
         ).unwrap();
 
         let mut hand = Hand::new(
-            [
+            vec![
                 Card::new(Suit::Clubs, Rank::Five),
                 Card::new(Suit::Clubs, Rank::Six),
             ],
             1.0,
+            HandState::Fresh,
         );
 
-        assert!(hand.can_double_down(rules_no_das));
+        assert!(hand.can_double_down(rules_no_can_dd_after_split));
 
         hand.double_down();
 
@@ -346,11 +350,12 @@ mod tests {
     #[test]
     fn splitting() {
         let mut hand1 = Hand::new(
-            [
+            vec![
                 Card::new(Suit::Clubs, Rank::Six),
                 Card::new(Suit::Clubs, Rank::Six),
             ],
             1.0,
+            HandState::Fresh,
         );
 
         let hand2 = hand1.split(
@@ -367,11 +372,12 @@ mod tests {
     #[test]
     fn surrendering() {
         let mut hand = Hand::new(
-            [
+            vec![
                 Card::new(Suit::Clubs, Rank::Six),
                 Card::new(Suit::Clubs, Rank::Six),
             ],
             1.0,
+            HandState::Fresh,
         );
 
         hand.surrender();

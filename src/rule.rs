@@ -33,7 +33,7 @@ pub struct RuleSet {
     // splitting
     max_hands: u64,
     can_play_slit_aces: bool,
-    das: bool, // can DD after splitting
+    can_dd_after_split: bool,
 
     // surrendering (always late (after dealer checks for bj))
     can_surrender: bool,
@@ -51,7 +51,7 @@ impl RuleSet {
         double_down_whitelist: Vec<u64>,
         max_hands: u64,
         can_play_slit_aces: bool,
-        das: bool,
+        can_dd_after_split: bool,
         can_surrender: bool,
     ) -> Result<Self, RuleSetError> {
         if decks == 0 {
@@ -91,7 +91,7 @@ impl RuleSet {
             double_down_whitelist,
             max_hands,
             can_play_slit_aces,
-            das,
+            can_dd_after_split,
             can_surrender,
         })
     }
@@ -136,8 +136,8 @@ impl RuleSet {
         self.can_play_slit_aces
     }
 
-    pub fn das(&self) -> bool {
-        self.das
+    pub fn can_dd_after_split(&self) -> bool {
+        self.can_dd_after_split
     }
 
     pub fn can_surrender(&self) -> bool {
